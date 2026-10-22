@@ -1,0 +1,96 @@
+stage2_specifications:
+  use_cpu: true
+  batch_size: 256
+  file_paths:
+    model: "model_files/model__2026-09-01__SL_21e8daa443aa4edaaed284e9cdafa8b7.weights.h5"
+    scaler: "model_files/scaler__2026-09-01__SL_21e8daa443aa4edaaed284e9cdafa8b7.pkl"
+
+
+data:
+  db:
+    dbname: ""
+    schema: ""
+
+  tables:
+    - name: "messungen"
+      columns: [] # wenn leer alle Spalten , min quell_id und messzeit_utc
+      quell_typ: ["senseBox", "DWD"]
+      start_date: null # start and end date can be set here or will be determined based on the latest DWD measurement and the defined time_window
+      end_date: null
+    - name: "quelle"
+      columns: [] # wenn leer alle Spalten, min id, quell_properties, from_date und until_date
+      typ: ["senseBox", "DWD"]
+    - name: "location"
+      columns: ["id", "properties"]
+
+  use_geofeatures: true
+
+preprocessing:
+  # JSON Daten extrahieren
+  SB_measured_values: 
+    temperature: ["value"]
+    humidity: ["value"]
+    pressure: ["value"]
+    lux: ["value"] 
+    uv: ["value"]
+
+  additional_parameters: 
+    lora: []
+    gateway: []
+    sensebox: []
+
+  quell_properties: [] # niota_standort notwendig wenn standortdaten aus PG geladen werden sollen
+  raster_properties: ['NDVI', 'GEB_D', 'Albedo', 'BO_FEU', 'STRA_D', 'GEL_EXP', 'GEL_HOE', 'GEL_NEI', 'PARKP_D', 'BESCHIRM', 'GEL_FORM', 'WASSER_D', 'GRU_VOL_D', 'VERS_2025', 'VEG_HOE', 'LT_4', 'LT_14'] 
+
+  # Neighboring senseBoxes, DL and DWD stations
+  # location column required for the following preprocessing
+  neighboring_senseBoxes: true
+  use_climatological_neighbors: true
+  number_of_neighbors: [5, 2] # [num_neighbors_considered, num_neighbors_output]
+  neighbors_reduction_method: "keep_n_closest_to_median" # "agg_mean", "keep_n_closest_to_median", "none"
+  consistency_threshold_neighbors: 15.0 # max allowed temperature difference between final two neighbors
+  measured_values_neighbors: 
+    temperature: ["value"]
+    humidity: ["value"]
+    pressure: ["value"]
+    lux: ["value"] 
+    uv: ["value"]
+
+  DWD_10min: true
+  DWD_stations_10min: ["DWD001"]
+  DWD_measured_values_10min: 
+    # temperature: ["value"] # measured data
+    temperature: 
+      main: ["value"] # smoothed data
+
+  drop_columns: ["location_features", "time_range_validity", "quell_typ", "quell_name", "location", "area_validity", "from_date", "until_date", "quell_properties", "location_id", "location_area_validity", "location_id_raster", "location_area_validity_raster"]
+  
+  NaN_handling:
+    NaN-fanactive_replace_with_0: true
+    dwd_NaN_replacement: "drop"  # "neighbors", "drop" or specific float value
+    neighbors: "drop" # "each_other_else_dwd", "drop"
+    drop_rest: true
+    exclude_from_drop: ["corrected_values"]
+
+  feature_engineering:
+    ema_15:
+      columns: []
+    ewma_15:
+      columns: []
+    measurement_time_handling: 
+      extract_month: false
+      extract_time: true
+      extract_doy: true
+
+  plausibility_checks:
+    enable: false
+    filter_implausible_samples: true
+    boundaries:
+      temperature_value: [-20, 50] # [min, max] or null for no check
+    specific_values:
+      temperature_value: [0.000]
+    gradient_threshold_quantile: 0.995
+    mad_threshold_quantile: 0.995
+
+model:
+    hidden_units: [244, 204]
