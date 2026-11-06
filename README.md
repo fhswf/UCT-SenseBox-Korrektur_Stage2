@@ -43,4 +43,6 @@ Die Verarbeitung wird in `logs/stage2.log` protokolliert.
 
 ## Lizenz
 
-...
+Copyright 2026 Urban Climate Twin, Fachhochschule Südwestfalen
+
+Lizenziert unter der [Apache License 2.0](LICENSE.md).
